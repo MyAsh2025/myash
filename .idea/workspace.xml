@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f8739fa7-2f8f-40cd-9405-3a8952f6e683" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deploy_myash.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/deploy_myash.ps1" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
