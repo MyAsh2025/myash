@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'src/ui/pages/home_page.dart';
 
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyAshApp());
@@ -16,7 +15,7 @@ class MyAshApp extends StatelessWidget {
       title: 'MyAsh',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5C6BC0)),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF56C8D0)),
         useMaterial3: true,
       ),
       home: const HomePage(),
