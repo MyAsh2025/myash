@@ -96,39 +96,59 @@ function New-TempProfileDir([string]$name){
 }
 
 function Open-Url([string]$url,[string]$mode,[string]$preferred){
-    if($mode -eq "default"){ Log "Opening default: $url"; Start-Process $url | Out-Null; return }
+    if($mode -eq "default"){
+        Log "Opening default: $url"
+        Start-Process $url | Out-Null
+        return
+    }
 
-    # 検索順: 指定 > Brave > Chrome > Edge
-    $order = @($preferred, "Brave","Chrome","Edge") | Select-Object -Unique
+    # 起動順: 指定→Brave→Chrome→Edge（重複除去）
+    $order = @($preferred,"Brave","Chrome","Edge") | Select-Object -Unique
 
     foreach($n in $order){
-        $bin = Find-BrowserPath $n; if(-not $bin){ continue }
+        $bin = Find-BrowserPath $n
+        if(-not $bin){ continue }
 
-        if($n -in @("Brave","Chrome")){
-            # まっさらプロファイルで起動（サインイン情報を絶対に拾わない）
-            $dir = New-TempProfileDir ($n.ToLower())
-            $args = @(
-                "--user-data-dir=""$dir""",
-                "--no-first-run",
-                "--disable-sync",
-                "--new-window"
-            )
-            if($mode -eq "guest"){ $args += "--guest" }  # シークレットより強い“ゲスト”
-            Log "Opening $n with isolated profile as $mode …"
-            Start-Process -FilePath $bin -ArgumentList ($args + $url) | Out-Null
-            return
+        if($n -eq "Brave" -or $n -eq "Chrome"){
+            # Brave/Chrome 共通
+            if($mode -eq "guest"){
+                # 完全に未ログインの一時プロファイルで起動（既存アカウント無関係）
+                $tmpProfile = Join-Path $env:TEMP ("myash-guest-" + [guid]::NewGuid().ToString("N"))
+                New-Item -ItemType Directory -Force -Path $tmpProfile | Out-Null
+
+                $args = @(
+                    "--user-data-dir=$tmpProfile",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--guest",
+                    "--new-window",
+                    $url
+                )
+
+                Log "Opening $n as isolated guest profile..."
+                Start-Process -FilePath $bin -ArgumentList $args | Out-Null
+                return
+            } else {
+                $args = @("--new-window", $url)
+                Log "Opening $n as $mode ..."
+                Start-Process -FilePath $bin -ArgumentList $args | Out-Null
+                return
+            }
         }
         elseif($n -eq "Edge"){
-            # Edge は --guest が効かない環境があるので InPrivate で代替
+            # Edge は InPrivate で代替（--guest なし）
             $args = @("--inprivate","--new-window",$url)
-            Log "Opening Edge InPrivate as $mode …"
+            Log "Opening Edge InPrivate as $mode ..."
             Start-Process -FilePath $bin -ArgumentList $args | Out-Null
             return
         }
     }
 
-    Log "No supported browser found; fallback default"; Start-Process $url | Out-Null
+    # ここまで来たら見つからない → 既定にフォールバック
+    Log "No supported browser found; fallback default"
+    Start-Process $url | Out-Null
 }
+
 
 
 
