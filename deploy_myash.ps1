@@ -86,19 +86,55 @@ function Find-BrowserPath([string]$name){
   return $null
 }
 
-function Open-Url([string]$url,[string]$mode,[string]$preferred){
-  if($mode -eq "default"){ Log "Opening default: $url"; Start-Process $url | Out-Null; return }
-  $order = @($preferred,"Brave","Chrome","Edge") | Select-Object -Unique
-  foreach($n in $order){
-    $bin = Find-BrowserPath $n; if(-not $bin){ continue }
-    if($n -in @("Brave","Chrome")){
-      $args = @("--guest","--new-window",$url); Log "Opening ($n guest)"; Start-Process -FilePath $bin -ArgumentList $args | Out-Null; return
-    } else {
-      $args = @("--inprivate","--new-window",$url); Log "Opening (Edge inprivate as guest alt)"; Start-Process -FilePath $bin -ArgumentList $args | Out-Null; return
+function Open-Url([string]$url, [string]$mode = $OpenMode, [string]$preferred = $PreferredBrowser) {
+  # 候補パスを優先順に並べる
+  $candidates = @()
+
+  switch ($preferred.ToLower()) {
+    "brave" {
+      $candidates += "$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe"
+      $candidates += "$env:ProgramFiles(x86)\BraveSoftware\Brave-Browser\Application\brave.exe"
+    }
+    "chrome" {
+      $candidates += "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+      $candidates += "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe"
+    }
+    "edge" {
+      $candidates += "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"
+      $candidates += "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
     }
   }
-  Log "No supported browser found; fallback default"; Start-Process $url | Out-Null
+
+  # 予備候補（どれも見つからない時のフォールバック順）
+  $candidates += @(
+    "$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe",
+    "$env:ProgramFiles(x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+    "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+  )
+
+  $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+  if (-not $exe) {
+    # 実行ファイルが見つからなければ既定ブラウザに委譲
+    Start-Process $url
+    return
+  }
+
+  $args = @("--new-window")
+
+  if ($mode -eq "guest") {
+    # 毎回クリーンな一時プロファイルで起動（＝未ログインを保証）
+    $tmpProfile = Join-Path $env:TEMP ("myash-browser-" + [guid]::NewGuid().ToString("N"))
+    $args += @("--user-data-dir=$tmpProfile","--no-first-run","--no-default-browser-check","--guest")
+  }
+
+  $args += $url
+  Start-Process -FilePath $exe -ArgumentList $args | Out-Null
 }
+
 
 try {
   Log "=== MyAsh minimal deploy start ==="
